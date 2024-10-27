@@ -1,0 +1,185 @@
+# Workflow that is manually triggered
+name: Cypress testing project - MAIN workflow
+
+# When to run the workflow
+on:
+  # Start the workflow automatically when a push is created
+  push:
+    # On what branches to start the workflow when a push is created
+    branches:
+      - develop
+      - 'release/**/*'
+  # Start the workflow automatically when a PR is created
+  pull_request:
+    # On what branches to start the workflow when a push is created
+    branches:
+      - '**'  # Run on all pull requests on any branches
+  # Allow the start of the workflow to be performed by manually starting it
+  workflow_dispatch:
+    # Area dedicated for the inputs of the workflow
+    inputs:
+      #INPUT_BOX_____WIP_FOR_NOW:
+      #  # The UI description to be shown instead of 'name'
+      #  description: 'Random value for the moment ...'
+      #  # A default value that will be used in case no value is explicitly provided
+      #  # default: 'TEST' # Default value has no real logic to be used at the same time as the control is "required" for input boxes
+      #  # The input is mandatory to be used in order for the workflow to run
+      #  required: true
+      #  # What data type does the input expect
+      #  type: string
+      RUN_QUICK_TEST_STAGE:
+        description: 'Run only the QUICK test suite ? (estimated completion time ~5 minutes)'
+        required: true
+        type: boolean
+        default: true # Default value for checkboxes shows what status will the control be initially 
+
+# Jobs that will perform the effective actions of the workflow
+jobs:
+  # First job
+  CypressTesting:
+    # What runner should be used to perform the actions of the workflow
+    runs-on: ["self-hosted", "Linux", "X64"]
+
+    # What efective steps should be performed as the part of this job
+    steps:
+    
+      # STEP: Checkout the repository
+      - name: Checkout
+        uses: actions/checkout@v4
+    
+      # STEP: Run a command on a linux based runner
+      #- name: Run an echo command only for the moment
+      #  run: echo "Hello ${{ inputs.someID_toEditLater }}"
+  
+      # STEP: Run prepration scripts needed for the environment to run the tests
+      - name: Prepare the environment
+        env:
+          ubuntu-sudo: ${{ secrets.UBUNTU_SUDO }}
+        run: |
+          cd cypress
+          echo 'Initialize the npm environment...'
+          npm init -y
+  
+          # Force the usage of admin rights in the console (required lated on configs and installations)
+          echo 'Preparing environent using pass: ${{ env.ubuntu-sudo }}'
+          echo '${{ env.ubuntu-sudo }}' | sudo -S apt-get update
+  
+          # Ensure that the timezone of the machine is the expected one in our tests
+          DESIRED_TZ="America/Los_Angeles"
+          CURRENT_TZ=$(cat /etc/timezone)
+          # Check if the current timezone matches the desired timezone
+          if [[ "$CURRENT_TZ" != "$DESIRED_TZ" ]]; then
+              echo "Currently the machine has the timezone '$CURRENT_TZ'. Forcing to change to the timezone '$DESIRED_TZ'..."
+              sudo timedatectl set-timezone "$DESIRED_TZ"
+              echo "Currently the machine has the timezone: '$(cat /etc/timezone)'."
+          else
+              echo "Currently the machine already has the timezone: '$DESIRED_TZ'."
+          fi
+  
+          # Cypress shows certain inconsistencies with the OS Ubuntu v24.04.1
+          # IPv6 must be disabled in order for the installation scripts to properly run
+          echo 'Disable the net IPv6 settings in order for the cypress installation to succeed on Ubuntu v24.04.1...' 
+          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+          
+          echo "Finished all required settings on the environment..."
+        shell: bash
+  
+      # STEP: Install a tool for report processing of the executed tests results
+      - name: Install the packages 'mochawesome'
+        run: |
+          cd cypress
+          echo "Starting the cypress mocha reporting tools..."
+          npm install mochawesome mochawesome-merge mochawesome-report-generator --save-dev --foreground-scripts
+        shell: bash
+  
+      # STEP: Install the latest version of cypress
+      - name: Install 'cypress' latest version
+        run: |
+          cd cypress
+          echo "Starting the cypress installation ..."
+          npm install cypress --save-dev --foreground-scripts #--verbose
+          echo "Cypress installation is finished."
+        shell: bash
+  
+      # STEP: Run Cypress tests (in headed mode)
+      - name: Run Cypress UI tests (headed) - Calculations page
+        env:
+          browser-to-use: ${{ vars.BROWSER }}
+          test-to-run: ${{ vars.TEST_NAME }}
+        timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
+        run: |
+          cd cypress
+            #npx cypress open
+          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run }}' 
+        shell: bash
+        continue-on-error: true  # Do not continue the build if this step fails
+  
+      # STEP: Run Cypress tests (in headed mode)
+      - name: Run Cypress UI tests (headed) - Employees page
+        if: ${{ github.event.inputs.RUN_QUICK_TEST_STAGE != 'true' }}
+        env:
+          browser-to-use: ${{ vars.BROWSER }}
+          test-to-run: ${{ vars.TEST_NAME }}
+        timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_MEDIUM) }}
+        run: |
+          cd cypress
+            #npx cypress open
+          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '**/EmployeesPage/*.cy.js' 
+        shell: bash
+        continue-on-error: true  # Continue the build even if this step fails
+  
+      # STEP: Run Cypress tests (in headless mode only)
+      - name: Run Cypress tests (headless)
+        # The IF statement in GitHub does not consider the usage of condition groupings
+        # This is why false && ( true || true ) will be evaluated to true
+        # To overcome this aspect we need to evaluate the OR statements first and only at the end verify the AND statements
+        #if: >
+        #    ( startsWith(github.ref, 'refs/heads/feature/')  ||
+        #    startsWith(github.ref, 'refs/heads/test/') ) &&
+        #    ${{ github.event.inputs.RUN_QUICK_TEST_STAGE != 'true' }}
+        if: ${{ github.event.inputs.RUN_QUICK_TEST_STAGE != 'true' }}
+        env:
+          browser-to-use: ${{ vars.BROWSER }}
+        timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
+        run: |
+          cd cypress
+            #npx cypress info
+          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}'
+        shell: bash
+        continue-on-error: true  # Continue the build even if this step fails
+  
+      # STEP: Merge the .json reports into one report only
+      - name: Merge mochawesome .json reports
+        run: |
+          cd cypress
+          npx mochawesome-merge tests/reports/*.json > mochawesome-report.json
+          npx marge mochawesome-report.json --reportDir tests/reports --inline
+        shell: bash
+  
+      # STEP: Upload artifacts to the build (jsons)
+      - name: Upload Cypress report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Cypress-test-report-json
+          path: cypress/tests/reports/*.json
+          retention-days: 5
+          if-no-files-found: warn # Other options ignore / error
+  
+      # STEP: Upload artifacts to the build (htmls)
+      - name: Upload Cypress report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Cypress-test-report-html
+          path: cypress/tests/reports/*.html
+          retention-days: 5
+          if-no-files-found: warn # Other options ignore / error
+  
+       # STEP: Upload artifacts to the build (videos)
+      - name: Upload Cypress video(s)
+        uses: actions/upload-artifact@v3
+        with:
+          name: Cypress-test-video
+          path: cypress/tests/videos
+          retention-days: 5
+          if-no-files-found: warn # Other options ignore / error
