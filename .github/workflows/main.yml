@@ -106,14 +106,25 @@ jobs:
       - name: Run Cypress UI tests (headed) - Calculations page
         env:
           browser-to-use: ${{ vars.BROWSER }}
-          test-to-run: ${{ vars.TEST_NAME }}
+          test-to-run-calculations: ${{ vars.TEST_NAME_CALCULATIONS }}
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
         run: |
           cd cypress
             #npx cypress open
-          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run }}' 
+          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-calculations }}' 
         shell: bash
         continue-on-error: true  # Do not continue the build if this step fails
+
+      # STEP: Run Cypress tests (in headed mode)
+      - name: Run Cypress UI tests (headed) - Navigations
+        env:
+          browser-to-use: ${{ vars.BROWSER }}
+          test-to-run-navigations: ${{ vars.TEST_NAME_NAVIGATION }}
+        timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
+        run: |
+          cd cypress
+            #npx cypress open
+          npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-navigations }}'
   
       # STEP: Run Cypress tests (in headed mode)
       - name: Run Cypress UI tests (headed) - Employees page
