@@ -13,19 +13,23 @@ fs.readFile(path, 'utf8', (err, data) => {
   const report = JSON.parse(data);
 
   // Extract test summary data from the JSON report
+  const suitesTested = report.stats.tests || 0;
   const totalTests = report.stats.tests || 0;
   const passedTests = report.stats.passes || 0;
   const failedTests = report.stats.failures || 0;
   const pendingTests = report.stats.pending || 0;
+  const passedPercentage = report.stats.passPercent || 0;
   const duration = (report.stats.duration / 1000).toFixed(2) + ' seconds';
 
   // Format the summary as Markdown
   const summaryMarkdown = `
 ### Cypress Test Summary
+- **Suites Tested**: ${suitesTested}
 - **Total Tests**: ${totalTests}
 - **Passed**: ${passedTests}
 - **Failed**: ${failedTests}
 - **Pending**: ${pendingTests}
+- **Pass %**: ${passedPercentage}
 - **Duration**: ${duration}
   `;
 
