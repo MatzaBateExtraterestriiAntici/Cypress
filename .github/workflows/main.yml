@@ -193,7 +193,7 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
         run: |
           cd cypress
-          node parseMochawesomeJSON.js
+          node parseMochawesomeJSON.js './tests/reports/mochawesome.json'
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
   
