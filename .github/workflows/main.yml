@@ -52,14 +52,14 @@ jobs:
           echo "Run the quick test stage: ${{ fromJSON(github.event.inputs.RUN_QUICK_TEST_STAGE) }}"
           echo "Run on what browser: ${{ vars.BROWSER }}"
           echo "------------------------ GitHub CONTEXT used ------------------------"
-          echo "event_name: $GITHUB_CONTEXT.event_name"
-          echo "ref: $GITHUB_CONTEXT.ref"
-          echo "repository: $GITHUB_CONTEXT.repository"
-          echo "run_id: $GITHUB_CONTEXT.run_id"
-          echo "run_number: $GITHUB_CONTEXT.run_number"
-          echo "run_attempt: $GITHUB_CONTEXT.run_attempt"
-          echo "retention_days: $GITHUB_CONTEXT.retention_days"
-          echo "triggering_actor: $GITHUB_CONTEXT.triggering_actor"
+          echo "event_name: ${{ github.event_name }}"
+          echo "ref: ${{ github.ref }}"
+          echo "repository: ${{ github.repository }}"
+          echo "run_id: ${{ github.run_id }}"
+          echo "run_number: ${{ github.run_number }}"
+          echo "run_attempt: ${{ github.run_attempt }}"
+          echo "retention_days: ${{ github.retention_days }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
         shell: bash
       
       # STEP: Checkout the repository
@@ -213,7 +213,7 @@ jobs:
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
   
-       # STEP: Upload artifacts to the build (videos)
+      # STEP: Upload artifacts to the build (videos)
       - name: Upload Cypress video(s)
         uses: actions/upload-artifact@v3
         with:
@@ -221,3 +221,9 @@ jobs:
           path: cypress/tests/videos
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
+
+      # STEP: Perform post build forced clean-up
+      - name: Force clean of working directory
+        run: |
+          rm -rf *
+          rm -rf .[^.]*  # Remove hidden files like .git, .github, .env, etc.
