@@ -171,7 +171,7 @@ jobs:
         shell: bash
   
       # STEP: Upload artifacts to the build (jsons)
-      - name: Upload Cypress report
+      - name: Upload Cypress report JSONs
         uses: actions/upload-artifact@v3
         with:
           name: Cypress-test-report-json
@@ -180,7 +180,7 @@ jobs:
           if-no-files-found: warn # Other options ignore / error
 
       # STEP: Upload artifacts to the build (jsons)
-      - name: Upload Cypress report
+      - name: Upload Cypress report HTMLs
         uses: actions/upload-artifact@v3
         with:
           name: Cypress-test-report-json
@@ -189,7 +189,7 @@ jobs:
           if-no-files-found: warn # Other options ignore / error
   
       # STEP: Upload artifacts to the build (htmls)
-      - name: Upload Cypress report
+      - name: Compile the JSON to summary results
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
         run: |
           cd cypress
