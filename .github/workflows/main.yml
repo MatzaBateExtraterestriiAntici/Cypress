@@ -185,8 +185,9 @@ jobs:
           json-master-report: ${{ vars.JSON_MASTER_REPORT_NAME }}
         run: |
           cd cypress
-          npx mochawesome-merge ${{ vars.JSON_REPORTS_FOLDER }}/*.json > ${{ vars.JSON_MASTER_REPORT_NAME }}
-          npx marge ${{ vars.JSON_MASTER_REPORT_NAME }} --reportDir ${{ vars.JSON_REPORTS_FOLDER }} --inline
+          npx mochawesome-merge ${{ vars.JSON_REPORTS_FOLDER }}/*.json > ${{ vars.JSON_MASTER_REPORT_NAME }}.json
+          cp ${{ vars.JSON_MASTER_REPORT_NAME }}.json ${{ vars.JSON_MASTER_REPORT_NAME }}_forSummary.json
+          npx marge ${{ vars.JSON_MASTER_REPORT_NAME }}.json --reportDir ${{ vars.JSON_REPORTS_FOLDER }} --inline
         shell: bash
   
       # STEP: Upload artifacts to the build (jsons)
@@ -206,7 +207,7 @@ jobs:
           json-master-report: ${{ vars.JSON_MASTER_REPORT_NAME }}
         run: | 
           cd cypress
-          node parseMochawesomeJSON.js './${{ vars.JSON_REPORTS_FOLDER }}/${{ vars.JSON_MASTER_REPORT_NAME }}'
+          node parseMochawesomeJSON.js './${{ vars.JSON_REPORTS_FOLDER }}/${{ vars.JSON_MASTER_REPORT_NAME }}_forSummary.json'
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
 
