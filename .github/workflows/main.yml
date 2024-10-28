@@ -89,8 +89,10 @@ jobs:
       - name: Install the packages 'mochawesome'
         run: |
           cd cypress
-          echo "Starting the cypress mocha reporting tools..."
+          echo "Starting the cypress mocha reporting tools instalation..."
           npm install mochawesome mochawesome-merge mochawesome-report-generator --save-dev --foreground-scripts
+          echo "Starting the fs instalation..."
+          npm install fs
         shell: bash
   
       # STEP: Install the latest version of cypress
@@ -176,15 +178,24 @@ jobs:
           path: cypress/tests/reports/*.json
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
-  
-      # STEP: Upload artifacts to the build (htmls)
+
+      # STEP: Upload artifacts to the build (jsons)
       - name: Upload Cypress report
         uses: actions/upload-artifact@v3
         with:
-          name: Cypress-test-report-html
-          path: cypress/tests/reports/*.html
+          name: Cypress-test-report-json
+          path: cypress/tests/reports/*.json
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
+  
+      # STEP: Upload artifacts to the build (htmls)
+      - name: Upload Cypress report
+        timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
+        run: |
+          cd cypress
+          node parseMochawesomeJSON.js
+        shell: bash
+        continue-on-error: true  # Continue the build even if this step fails
   
        # STEP: Upload artifacts to the build (videos)
       - name: Upload Cypress video(s)
