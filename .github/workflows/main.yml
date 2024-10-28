@@ -42,7 +42,18 @@ jobs:
 
     # What efective steps should be performed as the part of this job
     steps:
-    
+
+      # STEP:
+      - name: Show build parameters
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "Run the quick test stage: ${{ fromJSON(github.event.inputs.RUN_QUICK_TEST_STAGE) }}"
+          echo "Run on what browser: ${{ vars.BROWSER }}"
+          echo "------------------------ GitHub CONTEXT used ------------------------"
+          echo "$GITHUB_CONTEXT"
+        shell: bash
+      
       # STEP: Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
