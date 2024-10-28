@@ -46,10 +46,10 @@ jobs:
       # STEP: Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
-    
-      # STEP: Run a command on a linux based runner
-      #- name: Run an echo command only for the moment
-      #  run: echo "Hello ${{ inputs.someID_toEditLater }}"
+        with:
+          clean: true  # This will remove any untracked files and reset the directory
+          fetch-depth: 0 # Use this to get the full history instead of just the last commit
+          submodules: true # Not used currently but will be used in the future
   
       # STEP: Run prepration scripts needed for the environment to run the tests
       - name: Prepare the environment
