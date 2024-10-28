@@ -42,14 +42,33 @@ jobs:
 
     # What efective steps should be performed as the part of this job
     steps:
-    
+
+      # STEP:
+      - name: Show build parameters
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "------------------------- Build parameters --------------------------"
+          echo "Run the quick test stage: ${{ fromJSON(github.event.inputs.RUN_QUICK_TEST_STAGE) }}"
+          echo "Run on what browser: ${{ vars.BROWSER }}"
+          echo "------------------------ GitHub CONTEXT used ------------------------"
+          echo "event_name: ${{ github.event_name }}"
+          echo "ref: ${{ github.ref }}"
+          echo "repository: ${{ github.repository }}"
+          echo "run_id: ${{ github.run_id }}"
+          echo "run_number: ${{ github.run_number }}"
+          echo "run_attempt: ${{ github.run_attempt }}"
+          echo "retention_days: ${{ github.retention_days }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
+        shell: bash
+      
       # STEP: Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
-    
-      # STEP: Run a command on a linux based runner
-      #- name: Run an echo command only for the moment
-      #  run: echo "Hello ${{ inputs.someID_toEditLater }}"
+        with:
+          clean: true  # This will remove any untracked files and reset the directory
+          fetch-depth: 0 # Use this to get the full history instead of just the last commit
+          submodules: true # Not used currently but will be used in the future
   
       # STEP: Run prepration scripts needed for the environment to run the tests
       - name: Prepare the environment
@@ -112,7 +131,6 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-calculations }}' 
         shell: bash
         continue-on-error: true  # Do not continue the build if this step fails
@@ -125,7 +143,6 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-navigations }}'
   
       # STEP: Run Cypress tests (in headed mode)
@@ -137,13 +154,12 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_MEDIUM) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '**/EmployeesPage/*.cy.js' 
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
   
       # STEP: Run Cypress tests (in headless mode only)
-      - name: Run Cypress tests (headless)
+      - name: Run Cypress tests (headless) - ALL available
         # The IF statement in GitHub does not consider the usage of condition groupings
         # This is why false && ( true || true ) will be evaluated to true
         # To overcome this aspect we need to evaluate the OR statements first and only at the end verify the AND statements
@@ -179,16 +195,7 @@ jobs:
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
 
-      # STEP: Upload artifacts to the build (jsons)
-      - name: Upload Cypress report HTMLs
-        uses: actions/upload-artifact@v3
-        with:
-          name: Cypress-test-report-json
-          path: cypress/tests/reports/*.json
-          retention-days: 5
-          if-no-files-found: warn # Other options ignore / error
-  
-      # STEP: Upload artifacts to the build (htmls)
+      # STEP: Complile the summary results report to be displayed in GitHub Actions
       - name: Compile the JSON to summary results
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
         run: |
@@ -196,8 +203,17 @@ jobs:
           node parseMochawesomeJSON.js './tests/reports/mochawesome.json'
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
+
+      # STEP: Upload artifacts to the build (htmls)
+      - name: Upload Cypress report HTMLs
+        uses: actions/upload-artifact@v3
+        with:
+          name: Cypress-test-report-html
+          path: cypress/tests/reports/*.html
+          retention-days: 5
+          if-no-files-found: warn # Other options ignore / error
   
-       # STEP: Upload artifacts to the build (videos)
+      # STEP: Upload artifacts to the build (videos)
       - name: Upload Cypress video(s)
         uses: actions/upload-artifact@v3
         with:
@@ -205,3 +221,9 @@ jobs:
           path: cypress/tests/videos
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
+
+      # STEP: Perform post build forced clean-up
+      - name: Force clean of working directory
+        run: |
+          rm -rf *
+          rm -rf .[^.]*  # Remove hidden files like .git, .github, .env, etc.
