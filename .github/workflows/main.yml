@@ -186,7 +186,9 @@ jobs:
         run: |
           cd cypress
           npx mochawesome-merge ${{ vars.JSON_REPORTS_FOLDER }}/*.json > ${{ vars.JSON_MASTER_REPORT_NAME }}.json
+          node parseMochawesomeJSON.js './${{ vars.JSON_REPORTS_FOLDER }}/${{ vars.JSON_MASTER_REPORT_NAME }}.json'
           cp ${{ vars.JSON_MASTER_REPORT_NAME }}.json ${{ vars.JSON_MASTER_REPORT_NAME }}_forSummary.json
+          ls
           npx marge ${{ vars.JSON_MASTER_REPORT_NAME }}.json --reportDir ${{ vars.JSON_REPORTS_FOLDER }} --inline
         shell: bash
   
