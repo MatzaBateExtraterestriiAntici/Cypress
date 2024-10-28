@@ -112,7 +112,6 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-calculations }}' 
         shell: bash
         continue-on-error: true  # Do not continue the build if this step fails
@@ -125,7 +124,6 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_SHORT) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '${{ env.test-to-run-navigations }}'
   
       # STEP: Run Cypress tests (in headed mode)
@@ -137,13 +135,12 @@ jobs:
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_MEDIUM) }}
         run: |
           cd cypress
-            #npx cypress open
           npx cypress run --config-file cypress.config.js --browser '${{ env.browser-to-use }}' --headed --spec '**/EmployeesPage/*.cy.js' 
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
   
       # STEP: Run Cypress tests (in headless mode only)
-      - name: Run Cypress tests (headless)
+      - name: Run Cypress tests (headless) - ALL available
         # The IF statement in GitHub does not consider the usage of condition groupings
         # This is why false && ( true || true ) will be evaluated to true
         # To overcome this aspect we need to evaluate the OR statements first and only at the end verify the AND statements
@@ -179,16 +176,7 @@ jobs:
           retention-days: 5
           if-no-files-found: warn # Other options ignore / error
 
-      # STEP: Upload artifacts to the build (jsons)
-      - name: Upload Cypress report HTMLs
-        uses: actions/upload-artifact@v3
-        with:
-          name: Cypress-test-report-json
-          path: cypress/tests/reports/*.json
-          retention-days: 5
-          if-no-files-found: warn # Other options ignore / error
-  
-      # STEP: Upload artifacts to the build (htmls)
+      # STEP: Complile the summary results report to be displayed in GitHub Actions
       - name: Compile the JSON to summary results
         timeout-minutes: ${{ fromJson(vars.TEST_STAGE_TIMEOUT_LONG) }}
         run: |
@@ -196,6 +184,15 @@ jobs:
           node parseMochawesomeJSON.js './tests/reports/mochawesome.json'
         shell: bash
         continue-on-error: true  # Continue the build even if this step fails
+
+      # STEP: Upload artifacts to the build (htmls)
+      - name: Upload Cypress report HTMLs
+        uses: actions/upload-artifact@v3
+        with:
+          name: Cypress-test-report-html
+          path: cypress/tests/reports/*.html
+          retention-days: 5
+          if-no-files-found: warn # Other options ignore / error
   
        # STEP: Upload artifacts to the build (videos)
       - name: Upload Cypress video(s)
